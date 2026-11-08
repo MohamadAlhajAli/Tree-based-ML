@@ -70,17 +70,27 @@ Example: actual class 1, p = 0.90.
 - Brier contribution = (0.90 − 1)² = 0.01
 - Log-loss contribution = −ln(0.90) ≈ 0.1054
 
-ROC AUC measures positive-negative pair ordering:
+## ROC curves and AUC
 
-- Correct order: 1 point.
-- Tie: 0.5 points.
-- Wrong order: 0 points.
+At each threshold:
 
-AUC = points / number of pairs.
+- Predict class 1 when its score is greater than or equal to the threshold.
+- TPR = TP / (TP + FN), which is recall.
+- FPR = FP / (FP + TN) = 1 − specificity.
+- Plot the point (FPR, TPR): horizontal axis FPR, vertical axis TPR.
 
-Example: 6 correctly ordered pairs out of 9 gives AUC = 0.6667.
+Vary the threshold to trace the ROC curve. The ideal corner is (0, 1).
 
-High AUC does not guarantee accurate probability values.
+**AUC is the area under this curve.** It also measures positive-negative pair ordering: award 1 for a higher positive score, 0.5 for a tie, and 0 for a lower positive score, then average over all pairs.
+
+Example: positive scores [0.90, 0.60] and negative scores [0.80, 0.40].
+
+- 0.90 beats both negatives: 2 points.
+- 0.60 beats only 0.40: 1 point.
+- AUC = 3 / 4 = **0.75**.
+
+AUC 0.75 does not mean 75% accuracy or calibrated probabilities. Changing only the decision threshold leaves the full ROC curve, AUC, Brier score, and log loss unchanged. Binary ROC AUC requires both classes. Choose the serving threshold using validation data and mistake costs.
+
 
 ## Regression
 

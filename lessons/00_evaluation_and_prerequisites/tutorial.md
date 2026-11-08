@@ -248,38 +248,185 @@ Lower is better. Assigning zero probability to the actual outcome gives infinite
 
 Changing only the classification threshold does not change Brier score or log loss.
 
-## 7. Evaluating ranking with ROC AUC
+## 7. ROC curves and AUC
 
-ROC AUC measures whether positives receive higher scores than negatives.
+### 7.1 Read the two axes
 
-For each positive-negative pair:
+A ROC curve shows what happens as we change the decision threshold.
 
-- Positive score higher: award 1.
-- Scores tied: award 0.5.
-- Positive score lower: award 0.
+For this section:
 
-AUC = Total awarded points / Number of pairs
+- Positive (1): a student passes.
+- Negative (0): a student fails.
+- Predict pass when the probability of passing is greater than or equal to the threshold.
 
-Using the six observations:
+| Axis | Rate | Formula | Question |
+| --- | --- | --- | --- |
+| Vertical — Y | True positive rate (TPR) | nTP / (TP + FN) | What fraction of actual positives did we find? |
+| Horizontal — X | False positive rate (FPR) | FP / (FP + TN) | What fraction of actual negatives did we incorrectly predict as positive? |
 
-Positive scores: 0.90, 0.60, 0.30  
-Negative scores: 0.80, 0.40, 0.10
+**TPR is recall.** FPR uses actual negatives in its denominator; it is not 1 minus precision.
 
-- Positive 0.90 beats 3 negatives.
-- Positive 0.60 beats 2 negatives.
-- Positive 0.30 beats 1 negative.
+Specificity is TN / (TN + FP), so **FPR = 1 − specificity**.
 
-AUC = (3 + 2 + 1) / (3 × 3) = 6/9 ≈ 0.6667
+![ROC illustration showing the TPR and FPR axes and area under the curve](https://static.wixstatic.com/media/c77a35_64df6716baec400eb931bd0f9d51ba8f~mv2.jpg)
 
-Interpretation:
+*Illustration: RidgeRun AI, Marco Madrigal. The source illustrations use their own patient example. The calculations below use a separate four-student example.*
 
-- AUC = 1: perfect separation on these observations.
-- AUC = 0.5: chance-level pair ordering.
-- AUC < 0.5: worse than chance-level ordering.
+### 7.2 Calculate one ROC point
 
-AUC requires both positive and negative observations.
+Use these four students throughout this section:
 
-High AUC does not mean the probability values are accurate. Scores can rank examples correctly while being overconfident.
+| Student | Actual outcome | Probability of passing |
+| --- | --- | ---: |
+| A | Pass (1) | 0.90 |
+| B | Pass (1) | 0.60 |
+| C | Fail (0) | 0.80 |
+| D | Fail (0) | 0.40 |
+
+There are two actual positives and two actual negatives.
+
+Choose threshold **0.70**:
+
+| Student | Comparison | Prediction | Result |
+| --- | --- | --- | --- |
+| A | 0.90 ≥ 0.70 | Pass | TP |
+| B | 0.60 < 0.70 | Fail | FN |
+| C | 0.80 ≥ 0.70 | Pass | FP |
+| D | 0.40 < 0.70 | Fail | TN |
+
+Therefore TP = 1, FN = 1, FP = 1, and TN = 1.
+
+- TPR = 1 / (1 + 1) = **0.50**
+- FPR = 1 / (1 + 1) = **0.50**
+
+Plot **(FPR, TPR) = (0.50, 0.50)**.
+
+One threshold gives one point. Varying the threshold gives the ROC curve.
+
+### 7.3 Lower the threshold
+
+Keep the four probabilities unchanged. Predict positive when **p ≥ threshold**.
+
+| Threshold | Students predicted positive | TP | FP | FN | TN | FPR | TPR |
+| ---: | --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| 1.00 | None | 0 | 0 | 2 | 2 | 0.00 | 0.00 |
+| 0.90 | A | 1 | 0 | 1 | 2 | 0.00 | 0.50 |
+| 0.80 | A, C | 1 | 1 | 1 | 1 | 0.50 | 0.50 |
+| 0.60 | A, B, C | 2 | 1 | 0 | 1 | 0.50 | 1.00 |
+| 0.40 | A, B, C, D | 2 | 2 | 0 | 0 | 1.00 | 1.00 |
+
+Threshold 1.00 predicts nobody positive here because the largest score is 0.90. In general, start above the largest score to obtain the all-negative endpoint.
+
+When the threshold decreases:
+
+- More observations can be predicted positive.
+- TPR can increase because more actual positives are found.
+- FPR can increase because more actual negatives are incorrectly included.
+
+For fixed scores, neither rate decreases as the threshold decreases. A rate may stay unchanged.
+
+Changing the threshold changes decisions, not the fitted model or its probability values.
+
+### 7.4 Trace the curve
+
+Plot and connect these points in order:
+
+1. (0.00, 0.00)
+2. (0.00, 0.50)
+3. (0.50, 0.50)
+4. (0.50, 1.00)
+5. (1.00, 1.00)
+
+FPR is the horizontal coordinate; TPR is the vertical coordinate.
+
+In this example:
+
+- A vertical step means including an actual positive without adding a false positive.
+- A horizontal step means including an actual negative without finding another positive.
+
+The ideal corner is **(0, 1)**: no false positives and all positives found.
+
+The diagonal from (0, 0) to (1, 1) is the reference line TPR = FPR.
+
+### 7.5 Calculate area under the curve
+
+**AUC means Area Under the Curve.** ROC AUC summarizes the curve across thresholds.
+
+![Animated illustration of different ROC curves and their areas](https://static.wixstatic.com/media/c77a35_018da5d796a74abca1fa05eedc5077f6~mv2.gif)
+
+*Illustration: RidgeRun AI, Marco Madrigal. Observe how the curve and shaded area change; the animation is separate from our four-student calculation.*
+
+Our curve has two horizontal sections. Their areas are rectangles:
+
+| FPR interval | Width | Height | Area |
+| --- | ---: | ---: | ---: |
+| 0.00 to 0.50 | 0.50 | 0.50 | 0.25 |
+| 0.50 to 1.00 | 0.50 | 1.00 | 0.50 |
+
+Vertical sections have zero width and add no area.
+
+**AUC = 0.25 + 0.50 = 0.75**
+
+The rectangle shortcut works for this particular curve. General empirical curves can be integrated using trapezoids between successive points, including diagonal segments when scores are tied.
+
+### 7.6 Check the answer using ranking
+
+AUC also compares every actual positive with every actual negative:
+
+- Higher positive score: 1 point.
+- Equal scores: 0.5 points.
+- Lower positive score: 0 points.
+
+Number of pairs = 2 positives × 2 negatives = **4**.
+
+| Positive student | Negative student | Comparison | Points |
+| --- | --- | --- | ---: |
+| A | C | 0.90 > 0.80 | 1 |
+| A | D | 0.90 > 0.40 | 1 |
+| B | C | 0.60 < 0.80 | 0 |
+| B | D | 0.60 > 0.40 | 1 |
+
+**AUC = Total points / Number of pairs = 3 / 4 = 0.75**
+
+The area calculation and pair-ranking calculation agree.
+
+### 7.7 Interpret the result
+
+| AUC | Interpretation |
+| ---: | --- |
+| 1.00 | Every positive ranks above every negative |
+| 0.75 | Correct ordering, with half credit for ties, earns 75% of the available pair points |
+| 0.50 | Chance-level pair ordering overall |
+| Below 0.50 | Worse than chance-level pair ordering |
+
+AUC = 0.50 does not prove that scores were generated randomly. Different ranking patterns can produce the same area.
+
+Remember:
+
+- AUC = 0.75 does not mean 75% classification accuracy.
+- High AUC does not guarantee accurate probabilities.
+- Binary ROC AUC requires both positive and negative observations.
+- Changing only the selected threshold leaves the full ROC curve and AUC unchanged.
+- AUC does not automatically select a useful threshold for your task.
+
+For example, a higher threshold can reduce false positives while missing more positives. Choose the threshold using validation data and the costs of mistakes, then evaluate the frozen decision rule on test data.
+
+### 7.8 Practice
+
+Using the four students above:
+
+1. At threshold 0.85, which students are predicted positive?
+2. Find TP, FP, FN, and TN.
+3. Calculate TPR and FPR.
+4. Does selecting threshold 0.85 change the model's AUC?
+
+Answers:
+
+1. Only A.
+2. TP = 1, FP = 0, FN = 1, TN = 2.
+3. TPR = 1/2 = 0.50; FPR = 0/2 = 0.
+4. No. The scores and their ranking are unchanged.
 
 ## 8. Baselines
 
@@ -486,3 +633,7 @@ Try these before reading the answers.
    - MSE = 1
    - RMSE = 1
 5. Split by person. Keep every person's rows entirely within one partition.
+
+## References
+
+- Marco Madrigal, RidgeRun AI. [Demystifying ROC Curves: Understanding Performance Metrics for AI Classification Models](https://www.ridgerun.ai/post/demystifying-roc-curves-understanding-performance-metrics-for-ai-classification-models). Published July 24, 2024; updated August 1, 2024. Source of the embedded ROC illustrations.
