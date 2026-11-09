@@ -11,6 +11,9 @@ venv/
 .cache/
 catboost_info/
 
+# C++ build output
+build/
+
 # Local secrets
 .env
 .env.*

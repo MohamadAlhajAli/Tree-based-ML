@@ -1,9 +1,5 @@
 """Lesson 00: evaluation using scikit-learn."""
 
-
-from native import predict_classes
-from pandas import read_sql
-from numpy import dtype
 import random
 
 import numpy as np
